@@ -1,3 +1,3 @@
-module github.com/Aleksandr-Rozhok/Pokedex
+module github.com/Aleksandr-Rozhok
 
-go 1.22
+go 1.22.5

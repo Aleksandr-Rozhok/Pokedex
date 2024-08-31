@@ -2,21 +2,38 @@ package main
 
 import (
 	"bufio"
+	"encoding/json"
 	"fmt"
-	"github.com/Aleksandr-Rozhok/Pokedex/internal/PokeAPI"
+	"github.com/Aleksandr-Rozhok/internal/PokeAPI"
+	"github.com/Aleksandr-Rozhok/internal/Pokecache"
 	"os"
 	"strings"
+	"time"
 )
 
 type config struct {
 	Next     string
 	Previous string
+	Cache    *pokecache.Cache
+}
+
+type LocationResult struct {
+	Name string `json:"name"`
+	URL  string `json:"url"`
+}
+
+type LocationData struct {
+	Count    int              `json:"count"`
+	Next     string           `json:"next"`
+	Previous string           `json:"previous"`
+	Results  []LocationResult `json:"results"`
 }
 
 func main() {
 	cfg := config{
 		Next:     "https://pokeapi.co/api/v2/location-area/?limit=20&offset=20",
 		Previous: "",
+		Cache:    pokecache.NewCache(5 * time.Millisecond),
 	}
 
 	type cliCommand struct {
@@ -86,14 +103,40 @@ func commandExit(cfg *config) {
 }
 
 func pokeMap(cfg *config) {
-	if cfg.Next == "" {
+	cache, exists := cfg.Cache.Get(cfg.Next)
+	fmt.Printf("Cache exists: %v\n", exists)
+	if exists {
+		var result LocationData
+		err := json.Unmarshal(cache, &result)
+		if err != nil {
+			fmt.Println("Error parsing JSON:", err)
+		}
+
+		cfg.Next = result.Next
+		cfg.Previous = result.Previous
+
+		locations := result.Results
+
+		for _, location := range locations {
+			fmt.Println(location.Name)
+		}
+	} else if cfg.Next == "" {
 		fmt.Println("Error: You are on the last page")
 	} else {
-		requestResult := PokeAPI.PokeAPI(cfg.Next)
-		cfg.Next = requestResult.Next
-		cfg.Previous = requestResult.Previous
+		body := pokeAPI.PokeAPI(cfg.Next)
+		cfg.Cache.Add(cfg.Next, body)
 
-		locations := requestResult.Results
+		var result LocationData
+
+		err := json.Unmarshal(body, &result)
+		if err != nil {
+			fmt.Println("Error:", err)
+		}
+
+		cfg.Next = result.Next
+		cfg.Previous = result.Previous
+
+		locations := result.Results
 
 		for _, location := range locations {
 			fmt.Println(location.Name)
@@ -102,14 +145,41 @@ func pokeMap(cfg *config) {
 }
 
 func pokeMapB(cfg *config) {
-	if cfg.Previous == "" {
+	cache, exists := cfg.Cache.Get(cfg.Previous)
+	fmt.Printf("Cache exists: %v\n", exists)
+	if exists {
+		var result LocationData
+		err := json.Unmarshal(cache, &result)
+		if err != nil {
+			fmt.Println("Error parsing JSON:", err)
+		}
+
+		cfg.Next = result.Next
+		cfg.Previous = result.Previous
+
+		locations := result.Results
+
+		for _, location := range locations {
+			fmt.Println(location.Name)
+		}
+	} else if cfg.Previous == "" {
 		fmt.Println("Error: You are on the first page")
 	} else {
-		requestResult := PokeAPI.PokeAPI(cfg.Previous)
-		cfg.Next = requestResult.Next
-		cfg.Previous = requestResult.Previous
+		body := pokeAPI.PokeAPI(cfg.Previous)
 
-		locations := requestResult.Results
+		cfg.Cache.Add(cfg.Previous, body)
+
+		var result LocationData
+
+		err := json.Unmarshal(body, &result)
+		if err != nil {
+			fmt.Println("Error:", err)
+		}
+
+		cfg.Next = result.Next
+		cfg.Previous = result.Previous
+
+		locations := result.Results
 
 		for _, location := range locations {
 			fmt.Println(location.Name)

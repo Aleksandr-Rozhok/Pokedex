@@ -1,26 +1,13 @@
-package PokeAPI
+package pokeAPI
 
 import (
-	"encoding/json"
 	"fmt"
 	"io"
 	"log"
 	"net/http"
 )
 
-type LocationResult struct {
-	Name string `json:"name"`
-	URL  string `json:"url"`
-}
-
-type LocationData struct {
-	Count    int              `json:"count"`
-	Next     string           `json:"next"`
-	Previous string           `json:"previous"` // interface{} because it can be null
-	Results  []LocationResult `json:"results"`
-}
-
-func PokeAPI(url string) LocationData {
+func PokeAPI(url string) []byte {
 	res, err := http.Get(url)
 	if err != nil {
 		log.Fatal(err)
@@ -40,12 +27,5 @@ func PokeAPI(url string) LocationData {
 		log.Fatal(err)
 	}
 
-	var result LocationData
-
-	err = json.Unmarshal(body, &result)
-	if err != nil {
-		return LocationData{}
-	}
-
-	return result
+	return body
 }
