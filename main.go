@@ -29,6 +29,23 @@ type LocationData struct {
 	Results  []LocationResult `json:"results"`
 }
 
+type Pokemon struct {
+	Name string `json:"name"`
+	URL  string `json:"url"`
+}
+
+type PokemonEncounters struct {
+	Pokemon Pokemon `json:"pokemon"`
+}
+
+type PokemonData struct {
+	ID                int                 `json:"id"`
+	Name              string              `json:"name"`
+	PokemonEncounters []PokemonEncounters `json:"pokemon_encounters"`
+}
+
+var arg string
+
 func main() {
 	cfg := config{
 		Next:     "https://pokeapi.co/api/v2/location-area/?limit=20&offset=20",
@@ -63,6 +80,11 @@ func main() {
 			description: "Displays 20 previous locations in the Pokemon world",
 			callback:    pokeMapB,
 		},
+		"explore": {
+			name:        "explore",
+			description: "Displays 10 pokemons in a given area",
+			callback:    explore,
+		},
 	}
 
 	reader := bufio.NewReader(os.Stdin)
@@ -77,8 +99,13 @@ func main() {
 		}
 
 		input = strings.TrimSpace(input)
+		command := strings.Split(input, " ")
 
-		if value, exists := commands[input]; exists {
+		if value, exists := commands[command[0]]; exists {
+			if len(command) > 1 {
+				arg = command[1]
+			}
+
 			value.callback(&cfg)
 		} else {
 			fmt.Println("Unknown command:", input)
@@ -93,6 +120,8 @@ Usage:
 help: Displays a help message
 exit: Exit the Pokedex
 map: Displays 20 locations in the Pokemon world
+mapb: Displays 20 previous locations in the Pokemon world
+explore: Displays 10 pokemons in a given area
 %v`, "\n", "\n")
 
 }
@@ -183,6 +212,41 @@ func pokeMapB(cfg *config) {
 
 		for _, location := range locations {
 			fmt.Println(location.Name)
+		}
+	}
+}
+
+func explore(cfg *config) {
+	location := arg
+	link := "https://pokeapi.co/api/v2/location-area/" + location
+	fmt.Printf("Exploring %s...\n", location)
+
+	cache, exists := cfg.Cache.Get(link)
+	if exists {
+		var result PokemonData
+		err := json.Unmarshal(cache, &result)
+		if err != nil {
+			fmt.Println("Error parsing JSON:", err)
+		}
+
+		pokemons := result.PokemonEncounters
+		for _, pokemon := range pokemons {
+			fmt.Println(pokemon.Pokemon.Name)
+		}
+	} else {
+		body := pokeAPI.PokeAPI(link)
+		cfg.Cache.Add(link, body)
+
+		var result PokemonData
+
+		err := json.Unmarshal(body, &result)
+		if err != nil {
+			fmt.Println("Error:", err)
+		}
+
+		pokemons := result.PokemonEncounters
+		for _, pokemon := range pokemons {
+			fmt.Println(pokemon.Pokemon.Name)
 		}
 	}
 }
