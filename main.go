@@ -31,10 +31,35 @@ type LocationData struct {
 	Results  []LocationResult `json:"results"`
 }
 
+type Stats []struct {
+	BaseStat int  `json:"base_stat"`
+	Effort   int  `json:"effort"`
+	Stat     Stat `json:"stat"`
+}
+
+type Stat struct {
+	Name string `json:"name"`
+	URL  string `json:"url"`
+}
+
+type Type struct {
+	Name string `json:"name"`
+	URL  string `json:"url"`
+}
+
+type Types []struct {
+	Slot int  `json:"slot"`
+	Type Type `json:"type"`
+}
+
 type Pokemon struct {
 	Name           string `json:"name"`
 	URL            string `json:"url"`
 	BaseExperience int    `json:"base_experience"`
+	Height         int    `json:"height"`
+	Weight         int    `json:"weight"`
+	Stats          Stats  `json:"stats"`
+	Types          Types  `json:"types"`
 }
 
 type PokemonEncounters struct {
@@ -100,6 +125,11 @@ func main() {
 			description: "Catch the Pokemon",
 			callback:    catch,
 		},
+		"inspect": {
+			name:        "inspect",
+			description: "Inspect the Pokemon",
+			callback:    inspect,
+		},
 	}
 
 	reader := bufio.NewReader(os.Stdin)
@@ -138,6 +168,7 @@ map: Displays 20 locations in the Pokemon world
 mapb: Displays 20 previous locations in the Pokemon world
 explore: Displays 10 pokemons in a given area
 catch: Catch the Pokemon
+inspect: Inspect the Pokemon
 %v`, "\n", "\n")
 
 }
@@ -296,5 +327,30 @@ func catch(cfg *config) {
 		cfg.Pokedex.Pokemons[pokemon] = result
 	} else {
 		fmt.Printf("%s escaped!\n", pokemon)
+	}
+}
+
+func inspect(cfg *config) {
+	pokemon := arg
+	//link := "https://pokeapi.co/api/v2/stat/" + pokemon
+
+	if value, exists := cfg.Pokedex.Pokemons[pokemon]; exists {
+		fmt.Printf("Name: %s\n", value.Name)
+		fmt.Printf("Height: %d\n", value.Height)
+		fmt.Printf("Weight: %d\n", value.Weight)
+		fmt.Println("Stats:")
+		fmt.Printf("    -hp: %d\n", value.Stats[0].BaseStat)
+		fmt.Printf("    -attack: %d\n", value.Stats[1].BaseStat)
+		fmt.Printf("    -defence: %d\n", value.Stats[2].BaseStat)
+		fmt.Printf("    -special-attack: %d\n", value.Stats[3].BaseStat)
+		fmt.Printf("    -special-defence: %d\n", value.Stats[4].BaseStat)
+		fmt.Printf("    -speed: %d\n", value.Stats[5].BaseStat)
+		fmt.Println("Types:")
+
+		for _, typ := range value.Types {
+			fmt.Printf("    - %s\n", typ.Type.Name)
+		}
+	} else {
+		fmt.Println("Error: There no this pokemon in your Pokedex")
 	}
 }
