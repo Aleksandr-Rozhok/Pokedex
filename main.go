@@ -130,6 +130,11 @@ func main() {
 			description: "Inspect the Pokemon",
 			callback:    inspect,
 		},
+		"pokedex": {
+			name:        "pokedex",
+			description: "Displays all pokemons which you caught",
+			callback:    pokedex,
+		},
 	}
 
 	reader := bufio.NewReader(os.Stdin)
@@ -169,6 +174,7 @@ mapb: Displays 20 previous locations in the Pokemon world
 explore: Displays 10 pokemons in a given area
 catch: Catch the Pokemon
 inspect: Inspect the Pokemon
+pokedex: Displays all pokemons which you caught
 %v`, "\n", "\n")
 
 }
@@ -332,7 +338,6 @@ func catch(cfg *config) {
 
 func inspect(cfg *config) {
 	pokemon := arg
-	//link := "https://pokeapi.co/api/v2/stat/" + pokemon
 
 	if value, exists := cfg.Pokedex.Pokemons[pokemon]; exists {
 		fmt.Printf("Name: %s\n", value.Name)
@@ -352,5 +357,17 @@ func inspect(cfg *config) {
 		}
 	} else {
 		fmt.Println("Error: There no this pokemon in your Pokedex")
+	}
+}
+
+func pokedex(cfg *config) {
+	if len(cfg.Pokedex.Pokemons) == 0 {
+		fmt.Println("Pokedex is empty")
+	} else {
+		fmt.Println("Your Pokedex:")
+
+		for pokemon := range cfg.Pokedex.Pokemons {
+			fmt.Printf("    - %s\n", pokemon)
+		}
 	}
 }
