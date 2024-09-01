@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/Aleksandr-Rozhok/internal/PokeAPI"
 	"github.com/Aleksandr-Rozhok/internal/Pokecache"
+	"math/rand"
 	"os"
 	"strings"
 	"time"
@@ -15,6 +16,7 @@ type config struct {
 	Next     string
 	Previous string
 	Cache    *pokecache.Cache
+	Pokedex  Pokedex
 }
 
 type LocationResult struct {
@@ -30,8 +32,9 @@ type LocationData struct {
 }
 
 type Pokemon struct {
-	Name string `json:"name"`
-	URL  string `json:"url"`
+	Name           string `json:"name"`
+	URL            string `json:"url"`
+	BaseExperience int    `json:"base_experience"`
 }
 
 type PokemonEncounters struct {
@@ -44,6 +47,10 @@ type PokemonData struct {
 	PokemonEncounters []PokemonEncounters `json:"pokemon_encounters"`
 }
 
+type Pokedex struct {
+	Pokemons map[string]Pokemon
+}
+
 var arg string
 
 func main() {
@@ -51,6 +58,9 @@ func main() {
 		Next:     "https://pokeapi.co/api/v2/location-area/?limit=20&offset=20",
 		Previous: "",
 		Cache:    pokecache.NewCache(5 * time.Millisecond),
+		Pokedex: Pokedex{
+			Pokemons: make(map[string]Pokemon),
+		},
 	}
 
 	type cliCommand struct {
@@ -84,6 +94,11 @@ func main() {
 			name:        "explore",
 			description: "Displays 10 pokemons in a given area",
 			callback:    explore,
+		},
+		"catch": {
+			name:        "catch",
+			description: "Catch the Pokemon",
+			callback:    catch,
 		},
 	}
 
@@ -122,6 +137,7 @@ exit: Exit the Pokedex
 map: Displays 20 locations in the Pokemon world
 mapb: Displays 20 previous locations in the Pokemon world
 explore: Displays 10 pokemons in a given area
+catch: Catch the Pokemon
 %v`, "\n", "\n")
 
 }
@@ -248,5 +264,37 @@ func explore(cfg *config) {
 		for _, pokemon := range pokemons {
 			fmt.Println(pokemon.Pokemon.Name)
 		}
+	}
+}
+
+func catch(cfg *config) {
+	pokemon := arg
+	link := "https://pokeapi.co/api/v2/pokemon/" + pokemon
+
+	if pokemon == "" {
+		fmt.Println("This is empty string")
+	}
+
+	fmt.Printf("Throwing a Pokeball at %s...\n", pokemon)
+
+	body := pokeAPI.PokeAPI(link)
+
+	var result Pokemon
+
+	err := json.Unmarshal(body, &result)
+	if err != nil {
+		fmt.Println("Error:", err)
+	}
+
+	rand.Seed(time.Now().UnixNano())
+	userChance := rand.Intn(201)
+
+	pokemonExp := result.BaseExperience
+
+	if userChance >= pokemonExp {
+		fmt.Printf("%s was caught!\n", pokemon)
+		cfg.Pokedex.Pokemons[pokemon] = result
+	} else {
+		fmt.Printf("%s escaped!\n", pokemon)
 	}
 }
